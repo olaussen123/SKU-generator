@@ -1,0 +1,3 @@
+([('generate_SKU',
+   '/Users/mathiasolaussen/etikett-generator/dist/generate_SKU',
+   'EXECUTABLE')],)
