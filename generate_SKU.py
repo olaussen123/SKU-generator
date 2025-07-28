@@ -5,7 +5,6 @@ from PIL import Image, ImageDraw, ImageFont
 import barcode
 from barcode.writer import ImageWriter
 
-# Font
 try:
     font_large   = ImageFont.truetype("Arial.ttf", 48)
     font_small   = ImageFont.truetype("Arial.ttf", 24)
@@ -94,11 +93,9 @@ def create_labels(collection, products, sizes, colors):
         x = width*2//3 + (width//3 - text_w)//2
         y = upper_row_height + (height-upper_row_height-text_h)//2
         draw.text((x, y), size, font=font_large, fill="black")
-
-        # save label
+        
         img.save(os.path.join(product_folder, f"{sku}.png"))
 
-# GUI
 def run_gui():
     root = tk.Tk()
     root.title("SKU Generator")
@@ -162,7 +159,6 @@ def run_gui():
     for i, (cname, (_, var)) in enumerate(color_codes.items()):
         tk.Checkbutton(color_frame, text=cname, variable=var).grid(row=0, column=i, padx=5)
 
-    # --- Generer-knapp ---
     def on_generate():
         coll = coll_entry.get().strip()
         if not coll:
