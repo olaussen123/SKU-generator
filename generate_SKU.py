@@ -56,22 +56,27 @@ def create_labels(collection, products, sizes, colors):
         sku      = f"{code}-{color_code}-{size}"
         ean_data = eans[i]
 
-        # strekkode i høy oppløsning
+        # strekkode i høy oppløsning uten utjevning
         ean = barcode.get("ean13", ean_data, writer=ImageWriter())
         barcode_path = os.path.join(product_folder, sku)
-        options = {"dpi": 300, "module_width": 0.33}
+        options = {"dpi": 300, "module_width": 0.3, "quiet_zone": 6.5}
         actual_path = ean.save(barcode_path, options)
         with Image.open(actual_path) as bc_img:
-            try:
-                resample = Image.Resampling.LANCZOS
-            except AttributeError:  # Pillow < 9.1
-                resample = Image.LANCZOS
-            barcode_img = bc_img.copy().resize((310, 150), resample=resample)
+            barcode_img = bc_img.convert("RGB")
 
         # etikett
         width, height     = 600, 300
         upper_row_height  = 100
         col1_width, col2_width = 200, 200
+
+        # skaler strekkoden kun hvis nødvendig
+        max_w = width * 2 // 3 - 20
+        max_h = height - upper_row_height - 40
+        scale = min(max_w / barcode_img.width, max_h / barcode_img.height, 1)
+        if scale < 1:
+            new_size = (int(barcode_img.width * scale),
+                        int(barcode_img.height * scale))
+            barcode_img = barcode_img.resize(new_size, resample=Image.NEAREST)
 
         img  = Image.new("RGB", (width, height), "white")
         draw = ImageDraw.Draw(img)
