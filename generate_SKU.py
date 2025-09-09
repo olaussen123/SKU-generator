@@ -58,12 +58,17 @@ def create_labels(collection, products, sizes, colors):
         sku      = f"{code}-{color_code}-{size}"
         ean_data = eans[i]
 
-        # strekkode
+        # strekkode i høy oppløsning
         ean = barcode.get("ean13", ean_data, writer=ImageWriter())
         barcode_path = os.path.join(product_folder, sku)
-        actual_path  = ean.save(barcode_path)
+        options = {"dpi": 300, "module_width": 0.33}
+        actual_path = ean.save(barcode_path, options)
         with Image.open(actual_path) as bc_img:
-            barcode_img = bc_img.copy().resize((310, 150))
+            try:
+                resample = Image.Resampling.LANCZOS
+            except AttributeError:  # Pillow < 9.1
+                resample = Image.LANCZOS
+            barcode_img = bc_img.copy().resize((310, 150), resample=resample)
 
         # etikett
         width, height     = 600, 300
@@ -94,7 +99,10 @@ def create_labels(collection, products, sizes, colors):
         y = upper_row_height + (height-upper_row_height-text_h)//2
         draw.text((x, y), size, font=font_large, fill="black")
         
-        img.save(os.path.join(product_folder, f"{sku}.png"))
+        img_path = os.path.join(product_folder, f"{sku}.png")
+        img.save(img_path, dpi=(300, 300))
+        pdf_path = os.path.join(product_folder, f"{sku}.pdf")
+        img.save(pdf_path, "PDF", resolution=300)
 
 def run_gui():
     root = tk.Tk()
