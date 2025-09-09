@@ -69,6 +69,7 @@ def create_labels(collection, products, sizes, colors):
         upper_row_height  = 100
         col1_width, col2_width = 200, 200
 
+
         # skaler strekkoden for å utnytte tilgjengelig plass
         max_w = width * 2 // 3 - 20
         max_h = height - upper_row_height - 20
@@ -78,6 +79,7 @@ def create_labels(collection, products, sizes, colors):
                 int(barcode_img.width * scale),
                 int(barcode_img.height * scale),
             )
+
             barcode_img = barcode_img.resize(new_size, resample=Image.NEAREST)
 
         img  = Image.new("RGB", (width, height), "white")
