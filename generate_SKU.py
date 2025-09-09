@@ -69,13 +69,17 @@ def create_labels(collection, products, sizes, colors):
         upper_row_height  = 100
         col1_width, col2_width = 200, 200
 
-        # skaler strekkoden kun hvis nødvendig
+
+        # skaler strekkoden for å utnytte tilgjengelig plass
         max_w = width * 2 // 3 - 20
-        max_h = height - upper_row_height - 40
-        scale = min(max_w / barcode_img.width, max_h / barcode_img.height, 1)
-        if scale < 1:
-            new_size = (int(barcode_img.width * scale),
-                        int(barcode_img.height * scale))
+        max_h = height - upper_row_height - 20
+        scale = min(max_w / barcode_img.width, max_h / barcode_img.height)
+        if scale != 1:
+            new_size = (
+                int(barcode_img.width * scale),
+                int(barcode_img.height * scale),
+            )
+
             barcode_img = barcode_img.resize(new_size, resample=Image.NEAREST)
 
         img  = Image.new("RGB", (width, height), "white")
@@ -103,7 +107,10 @@ def create_labels(collection, products, sizes, colors):
             draw.text((x, y), text, font=font_small, fill="black")
 
         # nederste rad
-        img.paste(barcode_img, (10, upper_row_height+20))
+        paste_x = (width * 2 // 3 - barcode_img.width) // 2
+        paste_y = upper_row_height + (height - upper_row_height - barcode_img.height) // 2
+        img.paste(barcode_img, (paste_x, paste_y))
+
         bbox = draw.textbbox((0,0), size, font=font_large)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
