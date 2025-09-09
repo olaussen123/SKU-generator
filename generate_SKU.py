@@ -6,13 +6,11 @@ import barcode
 from barcode.writer import ImageWriter
 
 try:
-    font_large   = ImageFont.truetype("Arial.ttf", 48)
-    font_small   = ImageFont.truetype("Arial.ttf", 24)
-    font_product = ImageFont.truetype("Arial.ttf", 18)
-except:
+    font_large = ImageFont.truetype("Arial.ttf", 48)
+    font_small = ImageFont.truetype("Arial.ttf", 24)
+except Exception:
     font_large = ImageFont.load_default()
     font_small = ImageFont.load_default()
-    font_product = font_small
 
 # EAN-13 generator
 def generate_unique_random_eans(prefix="703018", total=25):
@@ -86,9 +84,18 @@ def create_labels(collection, products, sizes, colors):
         draw.line((width*2//3, upper_row_height, width*2//3, height), fill="black", width=3)
 
         # øverste rad
-        draw.text((20, 35), sku, font=font_small, fill="black")
-        draw.text((col1_width+20, 35), name, font=font_product, fill="black")
-        draw.text((col1_width+col2_width+20, 35), color_name.upper(), font=font_small, fill="black")
+        boxes = [
+            (sku, 0, col1_width),
+            (name, col1_width, col2_width),
+            (color_name.upper(), col1_width + col2_width, width - (col1_width + col2_width)),
+        ]
+        for text, left, box_width in boxes:
+            bbox = draw.textbbox((0, 0), text, font=font_small)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+            x = left + (box_width - text_w) / 2
+            y = (upper_row_height - text_h) / 2
+            draw.text((x, y), text, font=font_small, fill="black")
 
         # nederste rad
         img.paste(barcode_img, (10, upper_row_height+20))
