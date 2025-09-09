@@ -5,9 +5,14 @@ from PIL import Image, ImageDraw, ImageFont
 import barcode
 from barcode.writer import ImageWriter
 
+SCALE = 2
+BASE_DPI = 600
+
 try:
-    font_large = ImageFont.truetype("Arial.ttf", 48)
-    font_small = ImageFont.truetype("Arial.ttf", 24)
+
+    font_large = ImageFont.truetype("Arial.ttf", 48 * SCALE)
+    font_small = ImageFont.truetype("Arial.ttf", 24 * SCALE)
+
 except Exception:
     font_large = ImageFont.load_default()
     font_small = ImageFont.load_default()
@@ -59,15 +64,28 @@ def create_labels(collection, products, sizes, colors):
         # strekkode i høy oppløsning uten utjevning
         ean = barcode.get("ean13", ean_data, writer=ImageWriter())
         barcode_path = os.path.join(product_folder, sku)
-        options = {"dpi": 300, "module_width": 0.3, "quiet_zone": 6.5}
+
+        options = {"dpi": BASE_DPI, "module_width": 0.3, "quiet_zone": 6.5}
+
         actual_path = ean.save(barcode_path, options)
         with Image.open(actual_path) as bc_img:
             barcode_img = bc_img.convert("RGB")
 
         # etikett
-        width, height     = 600, 300
-        upper_row_height  = 100
-        col1_width, col2_width = 200, 200
+        width, height     = 600 * SCALE, 300 * SCALE
+        upper_row_height  = 100 * SCALE
+        col1_width, col2_width = 200 * SCALE, 200 * SCALE
+
+        # skaler strekkoden for å utnytte tilgjengelig plass
+        max_w = width * 2 // 3 - 20 * SCALE
+        max_h = height - upper_row_height - 20 * SCALE
+        scale = min(max_w / barcode_img.width, max_h / barcode_img.height)
+        if scale != 1:
+            new_size = (
+                int(barcode_img.width * scale),
+                int(barcode_img.height * scale),
+            )
+            barcode_img = barcode_img.resize(new_size, resample=Image.NEAREST)
 
 
         # skaler strekkoden for å utnytte tilgjengelig plass
@@ -86,11 +104,11 @@ def create_labels(collection, products, sizes, colors):
         draw = ImageDraw.Draw(img)
 
         # rammer
-        draw.rectangle([(0, 0), (width-1, height-1)], outline="black", width=3)
-        draw.line((0, upper_row_height, width, upper_row_height), fill="black", width=3)
-        draw.line((col1_width, 0, col1_width, upper_row_height), fill="black", width=3)
-        draw.line((col1_width+col2_width, 0, col1_width+col2_width, upper_row_height), fill="black", width=3)
-        draw.line((width*2//3, upper_row_height, width*2//3, height), fill="black", width=3)
+        draw.rectangle([(0, 0), (width-1, height-1)], outline="black", width=3 * SCALE)
+        draw.line((0, upper_row_height, width, upper_row_height), fill="black", width=3 * SCALE)
+        draw.line((col1_width, 0, col1_width, upper_row_height), fill="black", width=3 * SCALE)
+        draw.line((col1_width+col2_width, 0, col1_width+col2_width, upper_row_height), fill="black", width=3 * SCALE)
+        draw.line((width*2//3, upper_row_height, width*2//3, height), fill="black", width=3 * SCALE)
 
         # øverste rad
         boxes = [
@@ -119,9 +137,9 @@ def create_labels(collection, products, sizes, colors):
         draw.text((x, y), size, font=font_large, fill="black")
         
         img_path = os.path.join(product_folder, f"{sku}.png")
-        img.save(img_path, dpi=(300, 300))
+        img.save(img_path, dpi=(BASE_DPI, BASE_DPI))
         pdf_path = os.path.join(product_folder, f"{sku}.pdf")
-        img.save(pdf_path, "PDF", resolution=300)
+        img.save(pdf_path, "PDF", resolution=BASE_DPI)
 
 def run_gui():
     root = tk.Tk()
