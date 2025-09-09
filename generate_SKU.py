@@ -34,7 +34,7 @@ def generate_unique_random_eans(prefix="703018", total=25):
     return eans
 
 # Label drawing
-def create_labels(collection, products, sizes, colors):
+def create_labels(collection, products, sizes, colors, include_sizes=True):
     # Base directories
     output_dir   = "sku_labels_ui"
     barcodes_dir = os.path.join(output_dir, "barcodes")
@@ -43,13 +43,20 @@ def create_labels(collection, products, sizes, colors):
 
     all_combinations = []
     for p in products:
-        for size, var in sizes.items():
-            if var.get():
-                for color_name, (color_code, varc) in colors.items():
-                    if varc.get():
-                        all_combinations.append(
-                            (p["code"], p["name"], size, color_code, color_name)
-                        )
+        if include_sizes:
+            for size, var in sizes.items():
+                if var.get():
+                    for color_name, (color_code, varc) in colors.items():
+                        if varc.get():
+                            all_combinations.append(
+                                (p["code"], p["name"], size, color_code, color_name)
+                            )
+        else:
+            for color_name, (color_code, varc) in colors.items():
+                if varc.get():
+                    all_combinations.append(
+                        (p["code"], p["name"], "", color_code, color_name)
+                    )
 
     eans = generate_unique_random_eans(total=len(all_combinations))
 
@@ -58,7 +65,7 @@ def create_labels(collection, products, sizes, colors):
         product_folder = os.path.join(collection_dir, name)
         os.makedirs(product_folder, exist_ok=True)
 
-        sku      = f"{code}-{color_code}-{size}"
+        sku      = f"{code}-{color_code}-{size}" if include_sizes else f"{code}-{color_code}"
         ean_data = eans[i]
 
         # strekkode i høy oppløsning uten utjevning
@@ -77,7 +84,7 @@ def create_labels(collection, products, sizes, colors):
         col1_width, col2_width = 200 * SCALE, 200 * SCALE
 
         # skaler strekkoden for å utnytte tilgjengelig plass
-        max_w = width * 2 // 3 - 20 * SCALE
+        max_w = (width * 2 // 3 - 20 * SCALE) if include_sizes else (width - 20 * SCALE)
         max_h = height - upper_row_height - 20 * SCALE
         scale = min(max_w / barcode_img.width, max_h / barcode_img.height)
         if scale != 1:
@@ -89,7 +96,7 @@ def create_labels(collection, products, sizes, colors):
 
 
         # skaler strekkoden for å utnytte tilgjengelig plass
-        max_w = width * 2 // 3 - 20
+        max_w = (width * 2 // 3 - 20) if include_sizes else (width - 20)
         max_h = height - upper_row_height - 20
         scale = min(max_w / barcode_img.width, max_h / barcode_img.height)
         if scale != 1:
@@ -108,7 +115,8 @@ def create_labels(collection, products, sizes, colors):
         draw.line((0, upper_row_height, width, upper_row_height), fill="black", width=3 * SCALE)
         draw.line((col1_width, 0, col1_width, upper_row_height), fill="black", width=3 * SCALE)
         draw.line((col1_width+col2_width, 0, col1_width+col2_width, upper_row_height), fill="black", width=3 * SCALE)
-        draw.line((width*2//3, upper_row_height, width*2//3, height), fill="black", width=3 * SCALE)
+        if include_sizes:
+            draw.line((width*2//3, upper_row_height, width*2//3, height), fill="black", width=3 * SCALE)
 
         # øverste rad
         boxes = [
@@ -125,16 +133,21 @@ def create_labels(collection, products, sizes, colors):
             draw.text((x, y), text, font=font_small, fill="black")
 
         # nederste rad
-        paste_x = (width * 2 // 3 - barcode_img.width) // 2
-        paste_y = upper_row_height + (height - upper_row_height - barcode_img.height) // 2
-        img.paste(barcode_img, (paste_x, paste_y))
+        if include_sizes:
+            paste_x = (width * 2 // 3 - barcode_img.width) // 2
+            paste_y = upper_row_height + (height - upper_row_height - barcode_img.height) // 2
+            img.paste(barcode_img, (paste_x, paste_y))
 
-        bbox = draw.textbbox((0,0), size, font=font_large)
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
-        x = width*2//3 + (width//3 - text_w)//2
-        y = upper_row_height + (height-upper_row_height-text_h)//2
-        draw.text((x, y), size, font=font_large, fill="black")
+            bbox = draw.textbbox((0,0), size, font=font_large)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+            x = width*2//3 + (width//3 - text_w)//2
+            y = upper_row_height + (height-upper_row_height-text_h)//2
+            draw.text((x, y), size, font=font_large, fill="black")
+        else:
+            paste_x = (width - barcode_img.width) // 2
+            paste_y = upper_row_height + (height - upper_row_height - barcode_img.height) // 2
+            img.paste(barcode_img, (paste_x, paste_y))
         
         img_path = os.path.join(product_folder, f"{sku}.png")
         img.save(img_path, dpi=(BASE_DPI, BASE_DPI))
@@ -188,8 +201,20 @@ def run_gui():
     size_frame = tk.LabelFrame(root, text="Størrelser", padx=10, pady=10)
     size_frame.pack(fill="x", padx=10, pady=5)
     sizes = {s: tk.BooleanVar(value=True) for s in ["XS","S","M","L","XL","XXL"]}
+    size_checkbuttons = []
     for i, s in enumerate(sizes):
-        tk.Checkbutton(size_frame, text=s, variable=sizes[s]).grid(row=0, column=i, padx=5)
+        cb = tk.Checkbutton(size_frame, text=s, variable=sizes[s])
+        cb.grid(row=0, column=i, padx=5)
+        size_checkbuttons.append(cb)
+
+    no_size_var = tk.BooleanVar(value=False)
+
+    def toggle_sizes():
+        state = tk.DISABLED if no_size_var.get() else tk.NORMAL
+        for cb in size_checkbuttons:
+            cb.config(state=state)
+
+    tk.Checkbutton(size_frame, text="Ingen størrelser", variable=no_size_var, command=toggle_sizes).grid(row=0, column=len(sizes), padx=5)
 
     # --- Farger ---
     color_frame = tk.LabelFrame(root, text="Farger", padx=10, pady=10)
@@ -212,7 +237,7 @@ def run_gui():
         if not products:
             messagebox.showwarning("Feil", "Legg til minst ett produkt")
             return
-        create_labels(coll, products, sizes, color_codes)
+        create_labels(coll, products, sizes, color_codes, include_sizes=not no_size_var.get())
         messagebox.showinfo("Ferdig", f"Etiketter generert under 'sku_labels_ui/barcodes/{coll}'")
 
     tk.Button(root, text="Generer Etiketter", command=on_generate,
