@@ -9,8 +9,10 @@ SCALE = 2
 BASE_DPI = 600
 
 try:
+
     font_large = ImageFont.truetype("Arial.ttf", 48 * SCALE)
     font_small = ImageFont.truetype("Arial.ttf", 24 * SCALE)
+
 except Exception:
     font_large = ImageFont.load_default()
     font_small = ImageFont.load_default()
@@ -62,7 +64,9 @@ def create_labels(collection, products, sizes, colors):
         # strekkode i høy oppløsning uten utjevning
         ean = barcode.get("ean13", ean_data, writer=ImageWriter())
         barcode_path = os.path.join(product_folder, sku)
+
         options = {"dpi": BASE_DPI, "module_width": 0.3, "quiet_zone": 6.5}
+
         actual_path = ean.save(barcode_path, options)
         with Image.open(actual_path) as bc_img:
             barcode_img = bc_img.convert("RGB")
@@ -81,6 +85,19 @@ def create_labels(collection, products, sizes, colors):
                 int(barcode_img.width * scale),
                 int(barcode_img.height * scale),
             )
+            barcode_img = barcode_img.resize(new_size, resample=Image.NEAREST)
+
+
+        # skaler strekkoden for å utnytte tilgjengelig plass
+        max_w = width * 2 // 3 - 20
+        max_h = height - upper_row_height - 20
+        scale = min(max_w / barcode_img.width, max_h / barcode_img.height)
+        if scale != 1:
+            new_size = (
+                int(barcode_img.width * scale),
+                int(barcode_img.height * scale),
+            )
+
             barcode_img = barcode_img.resize(new_size, resample=Image.NEAREST)
 
         img  = Image.new("RGB", (width, height), "white")
